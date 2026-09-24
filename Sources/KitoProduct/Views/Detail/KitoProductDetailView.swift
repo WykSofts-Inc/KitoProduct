@@ -15,15 +15,20 @@ import KitoCore
 /// into the bag button, which bounces and counts up.
 ///
 /// ```swift
-/// KitoProductDetailView(product: runner, related: looks, sizeGuide: runnerGuide,
+/// KitoProductDetailView(product: runner, related: looks, wishlist: $savedIDs, sizeGuide: runnerGuide,
 ///                       onAddToBag: { product, variant in cart.add(product.cartItem(for: variant)) },
 ///                       onSelectRelated: { path.append($0) })
 /// ```
+///
+/// Pass `wishlist` (a set of product ids) and every heart on the page — the product's own and
+/// the ones on "Complete the look" — reads from and writes to it. Without it the hearts keep
+/// their own state.
 public struct KitoProductDetailView: View {
     @Environment(\.kitoTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: KitoProductDetailModel
     let related: [KitoProduct]
+    let wishlist: Binding<Set<String>>?
     let sizeGuide: KitoSizeGuide?
     let delivery: KitoDeliveryEstimator?
     let deliveryDetail: String?
@@ -47,6 +52,7 @@ public struct KitoProductDetailView: View {
     public init(
         product: KitoProduct,
         related: [KitoProduct] = [],
+        wishlist: Binding<Set<String>>? = nil,
         sizeGuide: KitoSizeGuide? = nil,
         delivery: KitoDeliveryEstimator? = KitoDeliveryEstimator(minDays: 1, maxDays: 3),
         deliveryDetail: String? = "Free delivery and 30-day returns",
@@ -59,7 +65,7 @@ public struct KitoProductDetailView: View {
         onShowReviews: (() -> Void)? = nil,
         onOpenBag: (() -> Void)? = nil
     ) {
-        self.init(model: KitoProductDetailModel(product), related: related, sizeGuide: sizeGuide, delivery: delivery,
+        self.init(model: KitoProductDetailModel(product), related: related, wishlist: wishlist, sizeGuide: sizeGuide, delivery: delivery,
                   deliveryDetail: deliveryDetail, instalments: instalments, showsBagButton: showsBagButton, tint: tint,
                   onAddToBag: onAddToBag, onSelectRelated: onSelectRelated, onNotifyMe: onNotifyMe,
                   onShowReviews: onShowReviews, onOpenBag: onOpenBag)
@@ -68,6 +74,7 @@ public struct KitoProductDetailView: View {
     public init(
         model: KitoProductDetailModel,
         related: [KitoProduct] = [],
+        wishlist: Binding<Set<String>>? = nil,
         sizeGuide: KitoSizeGuide? = nil,
         delivery: KitoDeliveryEstimator? = KitoDeliveryEstimator(minDays: 1, maxDays: 3),
         deliveryDetail: String? = "Free delivery and 30-day returns",
@@ -82,6 +89,7 @@ public struct KitoProductDetailView: View {
     ) {
         _model = State(initialValue: model)
         self.related = related
+        self.wishlist = wishlist
         self.sizeGuide = sizeGuide
         self.delivery = delivery
         self.deliveryDetail = deliveryDetail
@@ -172,7 +180,7 @@ public struct KitoProductDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
             if let rating = product.rating {
-                KitoRatingSummary(rating: rating, reviewCount: product.reviewCount, tint: tint, onTap: onShowReviews)
+                KitoProductRatingLine(rating: rating, reviewCount: product.reviewCount, tint: tint, onTap: onShowReviews)
             }
             KitoPriceTag(price: model.price, compareAt: product.compareAtPrice, currencyCode: product.currencyCode,
                          instalments: instalments, tint: tint)
@@ -257,16 +265,36 @@ public struct KitoProductDetailView: View {
         }
     }
 
+    /// A heart for one product: backed by the app's `wishlist` when there is one, otherwise by
+    /// this page's own state.
     private func savedBinding(_ id: String) -> Binding<Bool> {
-        Binding(get: { relatedSaved.contains(id) },
-                set: { isOn in if isOn { relatedSaved.insert(id) } else { relatedSaved.remove(id) } })
+        if let wishlist {
+            return Binding(get: { wishlist.wrappedValue.contains(id) },
+                           set: { isOn in
+                               if isOn { wishlist.wrappedValue.insert(id) } else { wishlist.wrappedValue.remove(id) }
+                           })
+        }
+        return Binding(get: { relatedSaved.contains(id) },
+                       set: { isOn in if isOn { relatedSaved.insert(id) } else { relatedSaved.remove(id) } })
+    }
+
+    /// The main product's heart: kept in step with `wishlist` when there is one.
+    private var productSaved: Binding<Bool> {
+        guard let wishlist else { return $model.isWishlisted }
+        let id = product.id
+        let model = model
+        return Binding(get: { wishlist.wrappedValue.contains(id) },
+                       set: { isOn in
+                           if isOn { wishlist.wrappedValue.insert(id) } else { wishlist.wrappedValue.remove(id) }
+                           model.isWishlisted = isOn
+                       })
     }
 
     // MARK: Bag
 
     private var bar: some View {
         KitoAddToBagBar(price: KitoMoney.string(model.price, currencyCode: product.currencyCode),
-                        state: model.addState, isWishlisted: $model.isWishlisted, tint: tint, action: add)
+                        state: model.addState, isWishlisted: productSaved, tint: tint, action: add)
             .background(FrameReader(id: ProductDetailSpace.source))
     }
 

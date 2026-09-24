@@ -20,6 +20,9 @@ KitoProductDetailView(
 )
 ```
 
+Pass `wishlist: $savedIDs` (a `Set` of product ids) and every heart on the page, including the
+ones on "Complete the look", reads from and saves to your wishlist.
+
 Picking a colour swaps the gallery to that colour's photos. Tapping "Add to bag" without a size
 shakes the size grid and says "Choose a size". A valid tap turns the button into a spinner and then
 "Added ✓", and the photo flies into the bag button, which bounces and counts up. The heart bursts
@@ -87,7 +90,7 @@ KitoStockIndicator(stock: 2)                                    // pulsing dot, 
 KitoDeliveryEstimateRow(estimator: KitoDeliveryEstimator(minDays: 1, maxDays: 2))
                                                                 // "Get it Fri 25 – Mon 28 Sep", "Order within 3 h 12 min"
 KitoProductBadges([.new, .bestseller, .lowStock, .eco])
-KitoRatingSummary(rating: 4.6, reviewCount: 214)
+KitoProductRatingLine(rating: 4.6, reviewCount: 214)
 KitoProductAccordion(product.sections)
 KitoAddToBagBar(price: "KES 9,900", state: .idle, isWishlisted: $saved) { add() }
 ```
@@ -111,6 +114,20 @@ KitoProductGrid(products, layout: .staggered, wishlist: $saved,
 Quick add on a product with sizes slides a size strip up over the photo. The grid's cards rise into
 place one after another.
 
+## In the cart
+
+```swift
+cart.add(product.cartItem(for: variant))      // line id "runner-01-black-UK 8", price, subtitle, picture
+
+KitoCartView(cart: cart, onCheckout: pay) { item in
+    KitoProductCartThumbnail(item)            // the photo or drawn artwork in the chosen colour
+}
+```
+
+Cart line ids always start with the product id, so two products in the same colour and size stay
+on separate lines. Drawn artwork has no URL, so `cartItem(for:)` remembers it for the line;
+`item.productMedia` gives it back, and `KitoProductCartThumbnail` draws it.
+
 ## Artwork
 
 ```swift
@@ -122,10 +139,20 @@ let image = art.renderedImage(size: CGSize(width: 400, height: 500))   // a UIIm
 Every view follows the Kito theme, works in light and dark mode, has VoiceOver labels and honours
 Reduce Motion.
 
+## Migrating from 0.1
+
+- `KitoRatingSummary` is now **`KitoProductRatingLine`**, so KitoProduct and
+  [KitoReviews](https://github.com/WykSofts-Inc/KitoReviews) (which keeps `KitoRatingSummary`) can be
+  imported in the same file. Same parameters.
+- Variants created without an `id` now get one that starts with the product id:
+  `"black-UK 8"` becomes `"runner-01-black-UK 8"`. Ids you pass yourself are unchanged.
+- `cartItem(for:)` line ids always start with the product id (see `cartLineID(for:)`). Variant ids
+  that already start with it, such as `"runner-01~black~UK 8"`, are used as they are.
+
 ## Installation
 
 ```swift
-.package(url: "https://github.com/WykSofts-Inc/KitoProduct.git", from: "0.1.0")
+.package(url: "https://github.com/WykSofts-Inc/KitoProduct.git", from: "0.2.0")
 ```
 
 KitoProduct uses [KitoCore](https://github.com/WykSofts-Inc/KitoCore),
