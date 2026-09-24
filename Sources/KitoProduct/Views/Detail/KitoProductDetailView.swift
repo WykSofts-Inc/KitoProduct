@@ -26,6 +26,7 @@ import KitoCore
 public struct KitoProductDetailView: View {
     @Environment(\.kitoTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
     @State private var model: KitoProductDetailModel
     let related: [KitoProduct]
     let wishlist: Binding<Set<String>>?
@@ -330,10 +331,14 @@ public struct KitoProductDetailView: View {
     private var flyingThumbnail: some View {
         let media = model.galleryMedia.first ?? KitoProductMedia.artwork(.tote(primary: .gray, accent: .white))
         return KitoProductMediaView(media)
+            .environment(\.layoutDirection, layoutDirection)
             .frame(width: 64, height: 80)
             .clipShape(RoundedRectangle(cornerRadius: theme.radii.md, style: .continuous))
             .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
             .modifier(FlightEffect(progress: flight, from: flightStart, to: flightEnd))
+            // The flight path comes from on-screen frames, so place it in left-to-right space.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .environment(\.layoutDirection, .leftToRight)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
