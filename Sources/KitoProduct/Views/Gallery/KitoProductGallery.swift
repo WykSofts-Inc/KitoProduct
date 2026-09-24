@@ -30,6 +30,7 @@ public struct KitoProductGallery: View {
 
     @Environment(\.kitoTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
     @Environment(ProductViewerPresenter.self) private var presenter: ProductViewerPresenter?
     @Environment(\.productViewerNamespace) private var namespace
     @Namespace private var thumbRing
@@ -153,7 +154,9 @@ public struct KitoProductGallery: View {
     private var peekGesture: some Gesture {
         MagnifyGesture()
             .onChanged { value in
-                peekAnchor = value.startAnchor
+                // The pinch anchor is on-screen; scale anchors mirror in right-to-left layouts.
+                let anchor = value.startAnchor
+                peekAnchor = layoutDirection == .rightToLeft ? UnitPoint(x: 1 - anchor.x, y: anchor.y) : anchor
                 peek = min(max(value.magnification, 1), 3)
             }
             .onEnded { _ in

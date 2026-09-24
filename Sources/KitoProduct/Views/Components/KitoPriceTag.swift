@@ -90,7 +90,7 @@ public struct KitoPriceTag: View {
     }
 
     private func discountPill(_ percent: Int) -> some View {
-        Text("−\(percent)%")
+        Text("−\(Double(percent) / 100, format: .percent)")
             .font(theme.typography.caption.weight(.bold))
             .foregroundStyle(tint ?? theme.colors.danger)
             .padding(.horizontal, 6)

@@ -15,6 +15,7 @@ import KitoCore
 struct ProductMediaViewer: View {
     @Environment(\.kitoTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
     let media: [KitoProductMedia]
     @Binding var index: Int
     let namespace: Namespace.ID?
@@ -155,19 +156,26 @@ struct ProductMediaViewer: View {
             .onEnded { value in dragEnded(value, width: width, size: size) }
     }
 
+    /// Drags are measured on screen, but offsets mirror in right-to-left layouts; flip the
+    /// horizontal part so pages and pans follow the finger.
+    private func layoutTranslation(_ physical: CGSize) -> CGSize {
+        layoutDirection == .rightToLeft ? CGSize(width: -physical.width, height: physical.height) : physical
+    }
+
     private func dragChanged(_ value: DragGesture.Value, width: CGFloat, size: CGSize) {
+        let translation = layoutTranslation(value.translation)
         if isZoomed {
-            pan = clampedPan(CGSize(width: basePan.width + value.translation.width,
-                                    height: basePan.height + value.translation.height), size: size)
+            pan = clampedPan(CGSize(width: basePan.width + translation.width,
+                                    height: basePan.height + translation.height), size: size)
             return
         }
         if axis == nil {
-            axis = abs(value.translation.width) > abs(value.translation.height) ? .horizontal : .vertical
+            axis = abs(translation.width) > abs(translation.height) ? .horizontal : .vertical
         }
         if axis == .horizontal {
-            pageDrag = rubberBanded(value.translation.width)
+            pageDrag = rubberBanded(translation.width)
         } else {
-            dismissDrag = value.translation
+            dismissDrag = translation
         }
     }
 
@@ -185,7 +193,7 @@ struct ProductMediaViewer: View {
     }
 
     private func endPaging(_ value: DragGesture.Value, width: CGFloat) {
-        let travel = value.predictedEndTranslation.width
+        let travel = layoutTranslation(value.predictedEndTranslation).width
         var next = index
         if travel < -width * 0.3 { next = min(index + 1, media.count - 1) }
         if travel > width * 0.3 { next = max(index - 1, 0) }
@@ -227,7 +235,8 @@ struct ProductMediaViewer: View {
             } else {
                 scale = 2.5
                 baseScale = 2.5
-                let target = CGSize(width: (frame.width / 2 - location.x) * 1.5,
+                let x = layoutDirection == .rightToLeft ? frame.width - location.x : location.x
+                let target = CGSize(width: (frame.width / 2 - x) * 1.5,
                                     height: (frame.height / 2 - location.y) * 1.5)
                 pan = clampedPan(target, size: frame)
                 basePan = pan

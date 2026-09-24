@@ -151,6 +151,15 @@ Reduce Motion.
 - `cartItem(for:)` line ids always start with the product id (see `cartLineID(for:)`). Variant ids
   that already start with it, such as `"runner-01~black~UK 8"`, are used as they are.
 
+## Right-to-left
+
+Layouts mirror with the layout direction: the gallery pager, dots, variant rows, fit bar and price
+tags all flip in Arabic or Hebrew. The full-screen viewer converts on-screen drags, so paging, the
+zoomed pan and double-tap-to-zoom follow the finger; the gallery's pinch peek zooms where you pinch,
+and the add-to-bag flight lands on the bag. The 360° viewer turns with the finger in every layout
+(its dial fills from the trailing side, like any progress bar). Discount pills use the locale's
+percent format.
+
 ## Installation
 
 ```swift
