@@ -110,12 +110,12 @@ final class KitoSelectionValidationTests: XCTestCase {
 
     func testValidSelection() throws {
         let variant = try matrix.validate(KitoProductSelection(colorID: "black", sizeID: "UK 8")).get()
-        XCTAssertEqual(variant.id, "black-UK 8")
+        XCTAssertEqual(variant.id, "runner-01-black-UK 8")
     }
 
     func testProductWithoutSizes() throws {
         let tote = KitoVariantMatrix(KitoProductSamples.tote)
-        XCTAssertEqual(try tote.validate(KitoProductSelection(colorID: "black")).get().id, "black")
+        XCTAssertEqual(try tote.validate(KitoProductSelection(colorID: "black")).get().id, "soko-tote-black")
         let scent = KitoVariantMatrix(KitoProductSamples.scent)
         XCTAssertEqual(scent.validate(KitoProductSelection()), .failure(.soldOut))
         XCTAssertTrue(scent.isSoldOut)
@@ -321,11 +321,38 @@ final class KitoProductModelTests: XCTestCase {
         let runner = KitoProductSamples.runner
         let variant = KitoProductVariant(colorID: "black", sizeID: "UK 8", stock: 2)
         let item = runner.cartItem(for: variant, quantity: 2)
-        XCTAssertEqual(item.id, "black-UK 8")
+        XCTAssertEqual(item.id, "runner-01-black-UK 8")
         XCTAssertEqual(item.subtitle, "Black / Ember · UK 8")
         XCTAssertEqual(item.unitPrice, 9_900)
         XCTAssertEqual(item.quantity, 2)
         XCTAssertNil(item.imageURL)
+    }
+
+    func testCartLinesStayApartAcrossProducts() {
+        let shirt = KitoProduct(id: "shirt", name: "Shirt", brand: "B", price: 100,
+                                variants: [KitoProductVariant(colorID: "black", sizeID: "M")])
+        let chinos = KitoProduct(id: "chinos", name: "Chinos", brand: "B", price: 100,
+                                 variants: [KitoProductVariant(colorID: "black", sizeID: "M")])
+        XCTAssertEqual(shirt.variants[0].id, "shirt-black-M")
+        XCTAssertNotEqual(shirt.cartItem(for: shirt.variants[0]).id, chinos.cartItem(for: chinos.variants[0]).id)
+        // A variant made outside the product gets the same line as the product's own.
+        XCTAssertEqual(shirt.cartItem(for: KitoProductVariant(colorID: "black", sizeID: "M")).id, "shirt-black-M")
+    }
+
+    func testCartLineKeepsIDsThatAlreadyNameTheProduct() {
+        let product = KitoProduct(id: "tote", name: "Tote", brand: "B", price: 100,
+                                  variants: [KitoProductVariant(id: "tote~black", colorID: "black"),
+                                             KitoProductVariant(id: "sku-9", colorID: "tan")])
+        XCTAssertEqual(product.cartLineID(for: product.variants[0]), "tote~black")
+        XCTAssertEqual(product.cartLineID(for: product.variants[1]), "tote-sku-9")
+        XCTAssertEqual(product.cartLineID(for: KitoProductVariant(id: "tote")), "tote")
+    }
+
+    func testCartItemCarriesArtwork() {
+        let runner = KitoProductSamples.runner
+        let item = runner.cartItem(for: runner.variants[0])
+        XCTAssertNil(item.imageURL)
+        guard case .artwork? = item.productMedia?.source else { return XCTFail("Expected artwork for the line") }
     }
 
     func testCartItemUsesPhotoURLAndVariantPrice() {
@@ -377,7 +404,7 @@ final class KitoProductDetailModelTests: XCTestCase {
         let model = KitoProductDetailModel(KitoProductSamples.runner)
         model.selectSize("UK 8")
         XCTAssertEqual(model.stockLevel, .low(2))
-        XCTAssertEqual(model.addToBag()?.id, "black-UK 8")
+        XCTAssertEqual(model.addToBag()?.id, "runner-01-black-UK 8")
         XCTAssertEqual(model.addState, .adding)
         model.finishAdding()
         XCTAssertEqual(model.addState, .added)

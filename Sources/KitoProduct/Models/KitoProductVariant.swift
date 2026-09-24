@@ -44,6 +44,9 @@ public struct KitoProductSize: Identifiable, Hashable, Sendable {
 }
 
 /// One purchasable combination of colour and size (a SKU).
+///
+/// Leave out `id` and one is made from the colour and size. Inside a `KitoProduct` that id is
+/// prefixed with the product id ("runner-01-black-UK 8"), so every product's variants stay unique.
 public struct KitoProductVariant: Identifiable, Hashable, Sendable {
     public let id: String
     public var colorID: String?
@@ -53,12 +56,23 @@ public struct KitoProductVariant: Identifiable, Hashable, Sendable {
     /// A price for this variant only, when it differs from the product's.
     public var price: Decimal?
 
+    /// Whether `id` was made from the colour and size rather than given.
+    var hasGeneratedID: Bool
+
     public init(id: String? = nil, colorID: String? = nil, sizeID: String? = nil, stock: Int? = nil, price: Decimal? = nil) {
         self.id = id ?? [colorID, sizeID].compactMap { $0 }.joined(separator: "-")
+        self.hasGeneratedID = id == nil
         self.colorID = colorID
         self.sizeID = sizeID
         self.stock = stock
         self.price = price
+    }
+
+    /// This variant with a made-up id prefixed by the product id. Given ids are left alone.
+    func scoped(to productID: String) -> KitoProductVariant {
+        guard hasGeneratedID else { return self }
+        let scopedID = [productID, colorID, sizeID].compactMap { $0 }.joined(separator: "-")
+        return KitoProductVariant(id: scopedID, colorID: colorID, sizeID: sizeID, stock: stock, price: price)
     }
 
     public var isInStock: Bool { stock.map { $0 > 0 } ?? true }

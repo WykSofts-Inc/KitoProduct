@@ -1,5 +1,5 @@
 //
-//  KitoRatingSummary.swift
+//  KitoProductRatingLine.swift
 //  KitoProduct
 //
 //  Created by Wycliff on 9/24/26.
@@ -12,9 +12,9 @@ import KitoCore
 /// Stars, the average and the review count on one line: "★★★★☆ 4.6 · 214 reviews".
 ///
 /// ```swift
-/// KitoRatingSummary(rating: 4.6, reviewCount: 214) { showReviews = true }
+/// KitoProductRatingLine(rating: 4.6, reviewCount: 214) { showReviews = true }
 /// ```
-public struct KitoRatingSummary: View {
+public struct KitoProductRatingLine: View {
     @Environment(\.kitoTheme) private var theme
     let rating: Double
     let reviewCount: Int

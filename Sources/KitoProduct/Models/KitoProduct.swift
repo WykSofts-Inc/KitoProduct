@@ -42,8 +42,11 @@ public struct KitoProduct: Identifiable, Hashable, Sendable {
     public var colors: [KitoProductColor]
     /// Every size the product is made in, in display order.
     public var sizes: [KitoProductSize]
-    /// One entry per purchasable combination (a SKU) with its stock.
-    public var variants: [KitoProductVariant]
+    /// One entry per purchasable combination (a SKU) with its stock. Variants without an id of
+    /// their own get one that starts with the product id.
+    public var variants: [KitoProductVariant] {
+        didSet { variants = variants.map { $0.scoped(to: id) } }
+    }
     /// A short paragraph under the title.
     public var summary: String?
     /// The accordion under the buy box: details, materials and care, shipping and returns.
@@ -80,7 +83,7 @@ public struct KitoProduct: Identifiable, Hashable, Sendable {
         self.spinFrames = spinFrames
         self.colors = colors
         self.sizes = sizes
-        self.variants = variants
+        self.variants = variants.map { $0.scoped(to: id) }
         self.summary = summary
         self.sections = sections
     }
